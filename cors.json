@@ -1,0 +1,7 @@
+[
+  {
+    "origin": ["https://siddu-k.github.io"],
+    "method": ["GET", "POST", "PUT"],
+    "maxAgeSeconds": 3600
+  }
+]
